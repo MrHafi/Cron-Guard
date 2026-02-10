@@ -46,10 +46,10 @@ if(is_404()){
 add_action( 'log_404_cron', 'hit_404');
 function hit_404(){
 
-// AVOIDE TWICE DATA ENTRY AS DUROING CRON IT DOES ADD TWICE
- if ( defined('DOING_CRON') && DOING_CRON ) {
-        return;
-    }
+// It checks temporary stored data in WordPress and blocks repeat runs
+ if ( get_transient('cron_guard_404') ) return;
+
+    set_transient('cron_guard_404', 1, 60); // 1 minute lock
 
 // INSERTING IN DB
 global $wpdb;
@@ -64,4 +64,26 @@ $wpdb->insert(
     ],
     [ '%s', '%s', '%s', '%s' ]
 );
+
+
+
+// sendiong email toa dmin
+
+$to      = get_option('admin_email');
+    $site    = get_bloginfo('name');
+    $home    = home_url();
+
+    $subject = '404 detected on site';
+    $message = 'Hello,<br>
+    We have detected a 404 error on your site <strong>' . $site . '</strong>.<br>
+    Please visit: <a href="' . $home . '">' . $home . '</a>';
+
+    $headers = array('Content-Type: text/html; charset=UTF-8');
+
+    wp_mail($to, $subject, $message, $headers);
 }
+
+
+
+
+    
